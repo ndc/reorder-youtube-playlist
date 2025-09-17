@@ -6,14 +6,14 @@
       <button @click="moveUp" :disabled="!canMoveUp">Move Up</button>
       <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
       <button @click="moveTop" :disabled="!hasSelection">Move To Top</button>
-  <button @click="openPositionPrompt" :disabled="!hasSelection">Move To Position…</button>
+      <button @click="openPositionPrompt" aria-haspopup="dialog" :disabled="!hasSelection">Move To Position…</button>
       <button @click="toggleSortPanel">Multi-Sort</button>
       <button @click="undo" :disabled="!canUndo">Undo</button>
-      <button @click="openHelp">Help</button>
+      <button @click="openHelp" aria-haspopup="dialog">Help</button>
       <button class="primary" @click="apply" :disabled="!dirty || applying">Apply Changes</button>
     </section>
 
-    <p v-if="message" :class="{ ok: messageType==='ok', err: messageType==='err' }">{{ message }}</p>
+    <p v-if="message" aria-live="polite" :class="{ ok: messageType==='ok', err: messageType==='err' }">{{ message }}</p>
 
     <MultiSortPanel
       v-if="showSort"
@@ -23,9 +23,9 @@
       @close="showSort=false"
     />
 
-  <div v-if="helpOpen" class="overlay" @click.self="helpOpen=false">
-      <div class="modal">
-        <header><h3>Keyboard Shortcuts</h3><button class="ghost" @click="helpOpen=false">Close</button></header>
+    <div v-if="helpOpen" class="overlay" @click.self="helpOpen=false">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kbd-title">
+        <header><h3 id="kbd-title">Keyboard Shortcuts</h3><button class="ghost" @click="helpOpen=false">Close</button></header>
         <ul>
           <li>Up/Down: Move selected item by 1</li>
           <li>Ctrl+Up/Down: Move selected item by 5</li>
@@ -44,14 +44,26 @@
       @close="showPosition=false"
     />
 
-    <ol class="list" v-if="items.length">
+    <PositionPrompt
+      v-if="showPosition"
+      :max="items.length"
+      :initial="(selectionIndex ?? 0) + 1"
+      @submit="onPositionSubmit"
+      @close="showPosition=false"
+    />
+
+    <ol class="list" v-if="items.length" role="listbox" aria-label="Playlist items" :aria-activedescendant="activeDesc">
       <li
         v-for="(it, i) in items"
         :key="it.id"
         :class="{ selected: selectionIndex===i }"
+        role="option"
+        :aria-selected="selectionIndex===i"
         @click="select(i)"
-        tabindex="0"
+        :tabindex="selectionIndex===i ? 0 : -1"
         @keydown="onKey($event, i)"
+        :id="'item-' + it.id"
+        :ref="el => setItemRef(el, i)"
       >
         <span class="index">{{ i + 1 }}.</span>
         <span class="title">{{ it.title }}</span>
@@ -63,7 +75,7 @@
   
 </template>
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { playlistFacade } from './lib/playlistFacade'
 import { initialState, setSelection, applyMoveDelta, applyMoveTo, setSortRules } from './services/stateService'
 import { stableMultiSort } from './services/sortService'
@@ -108,6 +120,17 @@ function applySorting() {
 function select(i: number) {
   state.value = setSelection(state.value, i)
 }
+
+const itemRefs = ref<HTMLElement[]>([])
+function setItemRef(el: any, index: number) {
+  if (el) itemRefs.value[index] = el as HTMLElement
+}
+const activeDesc = computed(() => selectionIndex.value != null ? `item-${state.value.items[selectionIndex.value].id}` : undefined)
+watch(selectionIndex, async i => {
+  if (i == null) return
+  await nextTick()
+  itemRefs.value[i]?.focus()
+})
 
 function openHelp() { helpOpen.value = true }
 function captureSnapshot() { prevSnapshot.value = { items: state.value.items, selectionIndex: state.value.selectionIndex, dirty: state.value.dirty } }
