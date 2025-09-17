@@ -7,10 +7,19 @@
       <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
       <button @click="moveTop" :disabled="!hasSelection">Move To Top</button>
       <button @click="moveToPosition" :disabled="!hasSelection">Move To Position…</button>
+      <button @click="toggleSortPanel">Multi-Sort</button>
       <button class="primary" @click="apply" :disabled="!dirty || applying">Apply Changes</button>
     </section>
 
     <p v-if="message" :class="{ ok: messageType==='ok', err: messageType==='err' }">{{ message }}</p>
+
+    <MultiSortPanel
+      v-if="showSort"
+      :rules="sortRules"
+      @update:rules="updateRules"
+      @apply-sort="applySorting"
+      @close="showSort=false"
+    />
 
     <ol class="list" v-if="items.length">
       <li
@@ -19,6 +28,7 @@
         :class="{ selected: selectionIndex===i }"
         @click="select(i)"
         tabindex="0"
+        @keydown="onKey($event, i)"
       >
         <span class="index">{{ i + 1 }}.</span>
         <span class="title">{{ it.title }}</span>
@@ -32,8 +42,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { playlistFacade } from './lib/playlistFacade'
-import { initialState, setSelection, applyMoveDelta, applyMoveTo } from './services/stateService'
+import { initialState, setSelection, applyMoveDelta, applyMoveTo, setSortRules } from './services/stateService'
+import { stableMultiSort } from './services/sortService'
 import type { AppState } from './models/types'
+import MultiSortPanel from './components/MultiSortPanel.vue'
 
 const state = ref<AppState>(initialState())
 const loading = ref(false)
@@ -44,10 +56,22 @@ const messageType = ref<'ok' | 'err' | ''>('')
 const items = computed(() => state.value.items)
 const selectionIndex = computed(() => state.value.selectionIndex)
 const dirty = computed(() => state.value.dirty)
+const sortRules = computed(() => state.value.sortRules)
 
 const hasSelection = computed(() => selectionIndex.value != null)
 const canMoveUp = computed(() => hasSelection.value && (selectionIndex.value as number) > 0)
 const canMoveDown = computed(() => hasSelection.value && (selectionIndex.value as number) < items.value.length - 1)
+
+const showSort = ref(false)
+function toggleSortPanel() { showSort.value = !showSort.value }
+function updateRules(rules: AppState['sortRules']) { state.value = setSortRules(state.value, rules) }
+function applySorting() {
+  if (!state.value.sortRules.length) return
+  const sorted = stableMultiSort(state.value.items, state.value.sortRules)
+  const selectedId = state.value.selectionIndex != null ? state.value.items[state.value.selectionIndex].id : null
+  state.value = { ...state.value, items: sorted, dirty: true, selectionIndex: selectedId ? sorted.findIndex(i => i.id === selectedId) : null }
+  showSort.value = false
+}
 
 function select(i: number) {
   state.value = setSelection(state.value, i)
@@ -86,6 +110,20 @@ function moveToPosition() {
     return
   }
   state.value = applyMoveTo(state.value, to - 1)
+}
+
+function onKey(e: KeyboardEvent, rowIndex: number) {
+  // Keyboard shortcuts: Up/Down moves; Ctrl+Up/Down jump by 5; Home/End; Enter prompts move-to; '?' toggles help (handled by alert)
+  if (selectionIndex.value !== rowIndex) {
+    // keep selection synced with focus
+    select(rowIndex)
+  }
+  if (e.key === 'ArrowUp') { e.preventDefault(); state.value = applyMoveDelta(state.value, e.ctrlKey ? -5 : -1) }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); state.value = applyMoveDelta(state.value, e.ctrlKey ? 5 : 1) }
+  else if (e.key === 'Home') { e.preventDefault(); state.value = applyMoveTo(state.value, 0) }
+  else if (e.key === 'End') { e.preventDefault(); state.value = applyMoveTo(state.value, items.value.length - 1) }
+  else if (e.key === 'Enter') { e.preventDefault(); moveToPosition() }
+  else if (e.key === '?') { e.preventDefault(); alert('Shortcuts: Up/Down, Ctrl+Up/Down, Home/End, Enter (move to position)') }
 }
 
 async function apply() {
