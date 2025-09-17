@@ -40,7 +40,7 @@ function getPlaylistOrThrow(playlistId: string) {
   return p
 }
 
-export const playlistFacade = {
+const fixtureFacade = {
   async loadPlaylist(playlistId: string): Promise<{ playlist: Playlist; items: VideoItem[] }> {
     const p = getPlaylistOrThrow(playlistId)
     // Simulate data fetch delay lightly
@@ -61,3 +61,17 @@ export const playlistFacade = {
     return { success: true, message: 'Applied' }
   },
 }
+
+let selected: typeof fixtureFacade | undefined
+try {
+  // dynamic import only if live mode is requested
+  if (import.meta.env.VITE_YT_MODE === 'live') {
+    const mod = await import('./playlistFacade.live')
+    selected = mod.livePlaylistFacade
+  }
+} catch {
+  // fallback to fixture on any error
+  selected = undefined
+}
+
+export const playlistFacade = selected ?? fixtureFacade
