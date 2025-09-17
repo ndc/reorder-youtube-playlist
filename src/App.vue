@@ -6,7 +6,7 @@
       <button @click="moveUp" :disabled="!canMoveUp">Move Up</button>
       <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
       <button @click="moveTop" :disabled="!hasSelection">Move To Top</button>
-      <button @click="moveToPosition" :disabled="!hasSelection">Move To Position…</button>
+  <button @click="openPositionPrompt" :disabled="!hasSelection">Move To Position…</button>
       <button @click="toggleSortPanel">Multi-Sort</button>
       <button @click="undo" :disabled="!canUndo">Undo</button>
       <button @click="openHelp">Help</button>
@@ -23,7 +23,7 @@
       @close="showSort=false"
     />
 
-    <div v-if="helpOpen" class="overlay" @click.self="helpOpen=false">
+  <div v-if="helpOpen" class="overlay" @click.self="helpOpen=false">
       <div class="modal">
         <header><h3>Keyboard Shortcuts</h3><button class="ghost" @click="helpOpen=false">Close</button></header>
         <ul>
@@ -35,6 +35,14 @@
         </ul>
       </div>
     </div>
+
+    <PositionPrompt
+      v-if="showPosition"
+      :max="items.length"
+      :initial="(selectionIndex ?? 0) + 1"
+      @submit="onPositionSubmit"
+      @close="showPosition=false"
+    />
 
     <ol class="list" v-if="items.length">
       <li
@@ -61,6 +69,7 @@ import { initialState, setSelection, applyMoveDelta, applyMoveTo, setSortRules }
 import { stableMultiSort } from './services/sortService'
 import type { AppState } from './models/types'
 import MultiSortPanel from './components/MultiSortPanel.vue'
+import PositionPrompt from './components/PositionPrompt.vue'
 
 const state = ref<AppState>(initialState())
 const loading = ref(false)
@@ -84,6 +93,7 @@ const canMoveUp = computed(() => hasSelection.value && (selectionIndex.value as 
 const canMoveDown = computed(() => hasSelection.value && (selectionIndex.value as number) < items.value.length - 1)
 
 const showSort = ref(false)
+const showPosition = ref(false)
 function toggleSortPanel() { showSort.value = !showSort.value }
 function updateRules(rules: AppState['sortRules']) { state.value = setSortRules(state.value, rules) }
 function applySorting() {
@@ -135,17 +145,11 @@ function moveTop() {
   captureSnapshot()
   state.value = applyMoveTo(state.value, 0)
 }
-function moveToPosition() {
-  if (selectionIndex.value == null) return
-  const toStr = window.prompt('Move to position (1-based):', String((selectionIndex.value as number) + 1))
-  if (!toStr) return
-  const to = Number.parseInt(toStr, 10)
-  if (Number.isNaN(to) || to < 1 || to > items.value.length) {
-    showError('Invalid position')
-    return
-  }
+function openPositionPrompt() { if (selectionIndex.value != null) showPosition.value = true }
+function onPositionSubmit(pos1: number) {
   captureSnapshot()
-  state.value = applyMoveTo(state.value, to - 1)
+  state.value = applyMoveTo(state.value, pos1 - 1)
+  showPosition.value = false
 }
 
 function onKey(e: KeyboardEvent, rowIndex: number) {
@@ -157,7 +161,7 @@ function onKey(e: KeyboardEvent, rowIndex: number) {
   else if (e.key === 'ArrowDown') { e.preventDefault(); state.value = applyMoveDelta(state.value, e.ctrlKey ? 5 : 1) }
   else if (e.key === 'Home') { e.preventDefault(); state.value = applyMoveTo(state.value, 0) }
   else if (e.key === 'End') { e.preventDefault(); state.value = applyMoveTo(state.value, items.value.length - 1) }
-  else if (e.key === 'Enter') { e.preventDefault(); moveToPosition() }
+  else if (e.key === 'Enter') { e.preventDefault(); openPositionPrompt() }
   else if (e.key === '?') { e.preventDefault(); helpOpen.value = true }
 }
 
