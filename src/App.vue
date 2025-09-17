@@ -75,7 +75,7 @@
   
 </template>
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { playlistFacade } from './lib/playlistFacade'
 import { initialState, setSelection, applyMoveDelta, applyMoveTo, setSortRules } from './services/stateService'
 import { stableMultiSort } from './services/sortService'
@@ -149,7 +149,7 @@ async function load() {
     const { items: loaded } = await playlistFacade.loadPlaylist('TEST')
     state.value = { ...state.value, selectedPlaylistId: 'TEST', items: loaded, selectionIndex: 0, dirty: false }
   } catch (e: any) {
-    showError(`Failed to load: ${e?.message ?? e}`)
+    showError(humanizeError('load', e))
   } finally {
     loading.value = false
   }
@@ -204,7 +204,7 @@ async function apply() {
       showError(res.message ?? 'Apply failed')
     }
   } catch (e: any) {
-    showError(`Apply failed: ${e?.message ?? e}`)
+    showError(humanizeError('apply', e))
   } finally {
     applying.value = false
   }
@@ -226,7 +226,26 @@ function clearMessage() {
 onMounted(() => {
   // Autoload fixture for convenience
   load()
+  const onBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (state.value.dirty) {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+  }
+  window.addEventListener('beforeunload', onBeforeUnload)
+  cleanup.value = () => window.removeEventListener('beforeunload', onBeforeUnload)
 })
+onBeforeUnmount(() => { if (cleanup.value) cleanup.value() })
+
+const cleanup = ref<null | (() => void)>(null)
+
+function humanizeError(context: 'load' | 'apply', e: any): string {
+  const code = (e?.message ?? '').toString()
+  if (code.includes('permission-denied')) return 'Permission denied. Check access to this playlist.'
+  if (code.includes('quota-exceeded')) return 'Quota exceeded. Please wait and try again later.'
+  if (code.includes('precondition-failed')) return 'The playlist changed externally. Refresh and try again.'
+  return context === 'load' ? `Failed to load: ${e?.message ?? e}` : `Apply failed: ${e?.message ?? e}`
+}
 </script>
 <style scoped>
 main { font-family: system-ui, sans-serif; padding: 1rem; }
