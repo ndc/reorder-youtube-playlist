@@ -2,7 +2,16 @@
   <main>
     <h1>Reorder YouTube Playlist</h1>
     <section class="controls">
-      <button @click="load()" :disabled="loading">Load Fixture</button>
+      <label class="inline">
+        <span>Playlist ID</span>
+        <input
+          v-model="playlistIdInput"
+          :placeholder="isLive ? 'PLxxxxxxxx...' : 'TEST (fixture)'"
+          aria-label="Playlist ID"
+        />
+      </label>
+      <span class="mode" :title="isLive ? 'Live YouTube API' : 'Fixture data'">Mode: {{ isLive ? 'live' : 'fixture' }}</span>
+      <button @click="load()" :disabled="loading || (isLive && !playlistIdInput.trim())">Load</button>
       <button @click="moveUp" :disabled="!canMoveUp">Move Up</button>
       <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
       <button @click="moveTop" :disabled="!hasSelection">Move To Top</button>
@@ -13,7 +22,10 @@
       <button class="primary" @click="apply" :disabled="!dirty || applying">Apply Changes</button>
     </section>
 
-    <p v-if="message" aria-live="polite" :class="{ ok: messageType==='ok', err: messageType==='err' }">{{ message }}</p>
+    <p v-if="message" aria-live="polite" :class="{ ok: messageType==='ok', err: messageType==='err' }">
+      {{ message }}
+      <button v-if="retry" class="ghost" @click="doRetry" :disabled="applying || loading">Retry</button>
+    </p>
 
     <MultiSortPanel
       v-if="showSort"
@@ -89,6 +101,10 @@ const applying = ref(false)
 const message = ref('')
 const messageType = ref<'ok' | 'err' | ''>('')
 const helpOpen = ref(false)
+const isLive = Boolean(import.meta.env.VITE_YT_MODE === 'live')
+const playlistIdInput = ref(isLive ? '' : 'TEST')
+let lastAction: null | (() => Promise<void>) = null
+const retry = ref<null | (() => void)>(null)
 
 // Single-level undo snapshot
 type Snapshot = { items: AppState['items']; selectionIndex: number | null; dirty: boolean }
@@ -146,8 +162,12 @@ async function load() {
   clearMessage()
   loading.value = true
   try {
-    const { items: loaded } = await playlistFacade.loadPlaylist('TEST')
-    state.value = { ...state.value, selectedPlaylistId: 'TEST', items: loaded, selectionIndex: 0, dirty: false }
+    const pid = isLive ? playlistIdInput.value.trim() : 'TEST'
+    lastAction = async () => {
+      const { items: loaded } = await playlistFacade.loadPlaylist(pid)
+      state.value = { ...state.value, selectedPlaylistId: pid, items: loaded, selectionIndex: 0, dirty: false }
+    }
+    await lastAction()
   } catch (e: any) {
     showError(humanizeError('load', e))
   } finally {
@@ -213,14 +233,20 @@ async function apply() {
 function showOk(msg: string) {
   message.value = msg
   messageType.value = 'ok'
+  retry.value = null
 }
 function showError(msg: string) {
   message.value = msg
   messageType.value = 'err'
+  // If transient, enable retry to re-run last action
+  if (/transient|network|try again/i.test(msg) && lastAction) {
+    retry.value = doRetry
+  }
 }
 function clearMessage() {
   message.value = ''
   messageType.value = ''
+  retry.value = null
 }
 
 onMounted(() => {
@@ -244,7 +270,15 @@ function humanizeError(context: 'load' | 'apply', e: any): string {
   if (code.includes('permission-denied')) return 'Permission denied. Check access to this playlist.'
   if (code.includes('quota-exceeded')) return 'Quota exceeded. Please wait and try again later.'
   if (code.includes('precondition-failed')) return 'The playlist changed externally. Refresh and try again.'
+  if (code.includes('transient-error')) {
+    return 'Temporary network/API error. Please try again.'
+  }
   return context === 'load' ? `Failed to load: ${e?.message ?? e}` : `Apply failed: ${e?.message ?? e}`
+}
+
+async function doRetry() {
+  clearMessage()
+  if (lastAction) await lastAction()
 }
 </script>
 <style scoped>
