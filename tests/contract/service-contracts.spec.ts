@@ -3,17 +3,17 @@ import { playlistFacade } from '../../src/lib/playlistFacade'
 
 describe('Service Contracts', () => {
   it('loads a playlist with items (contract)', async () => {
-    await expect(async () => {
-      // this should throw until implemented
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _ = await playlistFacade.loadPlaylist('TEST')
-    }).rejects.toThrow()
+    const { playlist, items } = await playlistFacade.loadPlaylist('TEST')
+    expect(playlist.id).toBe('TEST')
+    expect(items.length).toBeGreaterThan(0)
+    expect(items.map(i => i.id)).toEqual(['a', 'b', 'c'])
   })
 
   it('applies a new order (contract)', async () => {
-    await expect(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _ = await playlistFacade.applyReorder('TEST', ['a', 'b'])
-    }).rejects.toThrow()
+    const order = ['c', 'a', 'b']
+    const result = await playlistFacade.applyReorder('TEST', order)
+    expect(result.success).toBe(true)
+    const { items } = await playlistFacade.loadPlaylist('TEST')
+    expect(items.map(i => i.id)).toEqual(order)
   })
 })

@@ -3,6 +3,7 @@ import { moveToPosition } from '../../src/services/reorderService'
 import { stableMultiSort } from '../../src/services/sortService'
 import { initialState, setSelection, applyMoveDelta, applyMoveTo } from '../../src/services/stateService'
 import type { VideoItem, SortRule } from '../../src/models/types'
+import { playlistFacade } from '../../src/lib/playlistFacade'
 
 // UI Contracts validated via mid-layer services per Constitution (Midlayer Testing)
 
@@ -42,7 +43,17 @@ describe('UI Contracts', () => {
     expect(out.map(i => i.id)).toEqual(['3', '2', '1'])
   })
 
-  it.skip('apply commits preview and shows success/failure (contract)', () => {
-    // TODO: Wire a fake facade implementation and assert apply behavior end-to-end
+  it('apply commits preview and shows success/failure (contract)', async () => {
+    const { items } = await playlistFacade.loadPlaylist('TEST')
+    let state = initialState()
+    state = { ...state, items }
+    state = setSelection(state, 2) // select last item 'c'
+    state = applyMoveTo(state, 0) // move to top in preview
+    const preview = state.items.map(i => i.id)
+    expect(preview).toEqual(['c', 'a', 'b'])
+    const res = await playlistFacade.applyReorder('TEST', preview)
+    expect(res.success).toBe(true)
+    const after = (await playlistFacade.loadPlaylist('TEST')).items.map(i => i.id)
+    expect(after).toEqual(preview)
   })
 })
