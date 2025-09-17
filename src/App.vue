@@ -104,6 +104,7 @@ const helpOpen = ref(false)
 const isLive = Boolean(import.meta.env.VITE_YT_MODE === 'live')
 const playlistIdInput = ref(isLive ? '' : 'TEST')
 let lastAction: null | (() => Promise<void>) = null
+let lastActionKind: null | 'load' | 'apply' = null
 const retry = ref<null | (() => void)>(null)
 
 // Single-level undo snapshot
@@ -163,6 +164,7 @@ async function load() {
   loading.value = true
   try {
     const pid = isLive ? playlistIdInput.value.trim() : 'TEST'
+    lastActionKind = 'load'
     lastAction = async () => {
       const { items: loaded } = await playlistFacade.loadPlaylist(pid)
       state.value = { ...state.value, selectedPlaylistId: pid, items: loaded, selectionIndex: 0, dirty: false }
@@ -213,16 +215,20 @@ async function apply() {
   if (!dirty.value || !state.value.selectedPlaylistId) return
   applying.value = true
   try {
-    const order = state.value.items.map(i => i.id)
-    const res = await playlistFacade.applyReorder(state.value.selectedPlaylistId, order)
-    if (res.success) {
-      showOk('Applied successfully')
-      const { items: reloaded } = await playlistFacade.loadPlaylist(state.value.selectedPlaylistId)
-      state.value = { ...state.value, items: reloaded, dirty: false, lastAppliedAt: new Date().toISOString() }
-      prevSnapshot.value = null
-    } else {
-      showError(res.message ?? 'Apply failed')
+    lastActionKind = 'apply'
+    lastAction = async () => {
+      const order = state.value.items.map(i => i.id)
+      const res = await playlistFacade.applyReorder(state.value.selectedPlaylistId!, order)
+      if (res.success) {
+        showOk('Applied successfully')
+        const { items: reloaded } = await playlistFacade.loadPlaylist(state.value.selectedPlaylistId!)
+        state.value = { ...state.value, items: reloaded, dirty: false, lastAppliedAt: new Date().toISOString() }
+        prevSnapshot.value = null
+      } else {
+        showError(res.message ?? 'Apply failed')
+      }
     }
+    await lastAction()
   } catch (e: any) {
     showError(humanizeError('apply', e))
   } finally {
@@ -278,7 +284,26 @@ function humanizeError(context: 'load' | 'apply', e: any): string {
 
 async function doRetry() {
   clearMessage()
-  if (lastAction) await lastAction()
+  if (!lastAction || !lastActionKind) return
+  if (lastActionKind === 'load') {
+    loading.value = true
+    try {
+      await lastAction()
+    } catch (e: any) {
+      showError(humanizeError('load', e))
+    } finally {
+      loading.value = false
+    }
+  } else if (lastActionKind === 'apply') {
+    applying.value = true
+    try {
+      await lastAction()
+    } catch (e: any) {
+      showError(humanizeError('apply', e))
+    } finally {
+      applying.value = false
+    }
+  }
 }
 </script>
 <style scoped>
