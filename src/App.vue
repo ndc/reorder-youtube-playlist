@@ -358,10 +358,13 @@ function clearMessage() {
 }
 
 onMounted(async () => {
-    // Load playlists; in fixture mode, auto-select and auto-load first for convenience
-    await listPlaylists()
-    if (!isLive && selectedPlaylistId.value) {
-        await load()
+    // In fixture mode, auto-list and auto-load for convenience. In live mode, defer auth/listing
+    // until the user clicks Refresh to avoid popup blockers.
+    if (!isLive) {
+        await listPlaylists()
+        if (selectedPlaylistId.value) {
+            await load()
+        }
     }
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
         if (state.value.dirty) {
