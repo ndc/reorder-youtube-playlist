@@ -2,20 +2,26 @@
     <main>
         <h1>Reorder YouTube Playlist</h1>
         <section class="controls">
-            <label class="inline">
-                <span>Playlist ID</span>
-                <input
-                    v-model="playlistIdInput"
-                    :placeholder="isLive ? 'PLxxxxxxxx...' : 'TEST (fixture)'"
-                    aria-label="Playlist ID"
-                />
-            </label>
+            <div class="inline">
+                <label>
+                    <span>Playlist</span>
+                    <select v-model="selectedPlaylistId" aria-label="Select Playlist">
+                        <option disabled value="">
+                            {{ isLive ? 'Sign in to list playlists…' : 'Select a playlist' }}
+                        </option>
+                        <option v-for="pl in playlists" :key="pl.id" :value="pl.id">
+                            {{ pl.title }} ({{ pl.itemCount }})
+                        </option>
+                    </select>
+                </label>
+                <button class="ghost" @click="listPlaylists" :disabled="playlistsLoading">
+                    {{ playlistsLoading ? 'Loading…' : 'Refresh' }}
+                </button>
+            </div>
             <span class="mode" :title="isLive ? 'Live YouTube API' : 'Fixture data'"
                 >Mode: {{ isLive ? 'live' : 'fixture' }}</span
             >
-            <button @click="load()" :disabled="loading || (isLive && !playlistIdInput.trim())">
-                Load
-            </button>
+            <button @click="load()" :disabled="loading || !selectedPlaylistId">Load</button>
             <button @click="moveUp" :disabled="!canMoveUp">Move Up</button>
             <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
             <button @click="moveTop" :disabled="!hasSelection">Move To Top</button>
@@ -98,7 +104,7 @@
                 :tabindex="selectionIndex === i ? 0 : -1"
                 @keydown="onKey($event, i)"
                 :id="'item-' + it.id"
-                :ref="(el) => setItemRef(el, i)"
+                :ref="assignItemRef(i)"
             >
                 <span class="index">{{ i + 1 }}.</span>
                 <span class="title">{{ it.title }}</span>
@@ -122,6 +128,7 @@ import { stableMultiSort } from './services/sortService'
 import type { AppState } from './models/types'
 import MultiSortPanel from './components/MultiSortPanel.vue'
 import PositionPrompt from './components/PositionPrompt.vue'
+import type { Playlist } from './models/types'
 
 const state = ref<AppState>(initialState())
 const loading = ref(false)
@@ -129,8 +136,10 @@ const applying = ref(false)
 const message = ref('')
 const messageType = ref<'ok' | 'err' | ''>('')
 const helpOpen = ref(false)
-const isLive = Boolean(import.meta.env.VITE_YT_MODE === 'live')
-const playlistIdInput = ref(isLive ? '' : 'TEST')
+const isLive = Boolean((import.meta as any).env?.VITE_YT_MODE === 'live')
+const playlists = ref<Playlist[]>([])
+const playlistsLoading = ref(false)
+const selectedPlaylistId = ref<string>('')
 let lastAction: null | (() => Promise<void>) = null
 let lastActionKind: null | 'load' | 'apply' = null
 const retry = ref<null | (() => void)>(null)
@@ -179,13 +188,18 @@ function select(i: number) {
 }
 
 const itemRefs = ref<HTMLElement[]>([])
-function setItemRef(el: any, index: number) {
+function setItemRef(el: unknown, index: number) {
     if (el) itemRefs.value[index] = el as HTMLElement
+}
+function assignItemRef(index: number) {
+    return (el: Element | null) => {
+        if (el) setItemRef(el as unknown as HTMLElement, index)
+    }
 }
 const activeDesc = computed(() =>
     selectionIndex.value != null ? `item-${state.value.items[selectionIndex.value].id}` : undefined
 )
-watch(selectionIndex, async (i) => {
+watch(selectionIndex, async (i: number | null) => {
     if (i == null) return
     await nextTick()
     itemRefs.value[i]?.focus()
@@ -218,7 +232,7 @@ async function load() {
     clearMessage()
     loading.value = true
     try {
-        const pid = isLive ? playlistIdInput.value.trim() : 'TEST'
+        const pid = selectedPlaylistId.value || ''
         lastActionKind = 'load'
         lastAction = async () => {
             const { items: loaded } = await playlistFacade.loadPlaylist(pid)
@@ -293,7 +307,7 @@ async function apply() {
     try {
         lastActionKind = 'apply'
         lastAction = async () => {
-            const order = state.value.items.map((i) => i.id)
+            const order = state.value.items.map((i: { id: string }) => i.id)
             const res = await playlistFacade.applyReorder(state.value.selectedPlaylistId!, order)
             if (res.success) {
                 showOk('Applied successfully')
@@ -338,9 +352,12 @@ function clearMessage() {
     retry.value = null
 }
 
-onMounted(() => {
-    // Autoload fixture for convenience
-    load()
+onMounted(async () => {
+    // Load playlists; in fixture mode, auto-select and auto-load first for convenience
+    await listPlaylists()
+    if (!isLive && selectedPlaylistId.value) {
+        await load()
+    }
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
         if (state.value.dirty) {
             event.preventDefault()
@@ -394,6 +411,23 @@ async function doRetry() {
         }
     }
 }
+
+async function listPlaylists() {
+    clearMessage()
+    playlistsLoading.value = true
+    try {
+        const lists = await playlistFacade.listUserPlaylists()
+        playlists.value = lists
+        // Preserve selection if still present; otherwise select the first playlist (if any)
+        if (!selectedPlaylistId.value && lists.length) {
+            selectedPlaylistId.value = lists[0].id
+        }
+    } catch (e: any) {
+        showError(humanizeError('load', e))
+    } finally {
+        playlistsLoading.value = false
+    }
+}
 </script>
 <style scoped>
 main {
@@ -405,6 +439,11 @@ main {
     gap: 0.5rem;
     flex-wrap: wrap;
     margin: 0.75rem 0;
+}
+.controls .inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 button.primary {
     background: #2563eb;

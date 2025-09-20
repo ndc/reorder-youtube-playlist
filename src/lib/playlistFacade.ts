@@ -70,6 +70,10 @@ function getPlaylistOrThrow(playlistId: string) {
 }
 
 const fixtureFacade = {
+    async listUserPlaylists(): Promise<Playlist[]> {
+        // Provide fixture playlist list with just TEST
+        return [{ id: 'TEST', title: 'Fixture Playlist', privacyStatus: 'private', itemCount: 3 }]
+    },
     async loadPlaylist(playlistId: string): Promise<{ playlist: Playlist; items: VideoItem[] }> {
         const p = getPlaylistOrThrow(playlistId)
         // Simulate data fetch delay lightly
@@ -97,7 +101,7 @@ const fixtureFacade = {
 let selected: typeof fixtureFacade | undefined
 try {
     // dynamic import only if live mode is requested
-    if (import.meta.env.VITE_YT_MODE === 'live') {
+    if ((import.meta as any).env?.VITE_YT_MODE === 'live') {
         const mod = await import('./playlistFacade.live')
         selected = mod.livePlaylistFacade
     }

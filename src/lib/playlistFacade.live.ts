@@ -63,6 +63,30 @@ async function fetchPlaylistMeta(playlistId: string): Promise<Playlist> {
     }
 }
 
+async function listMinePlaylists(): Promise<Playlist[]> {
+    let pageToken = ''
+    const out: Playlist[] = []
+    do {
+        const q = new URLSearchParams({
+            part: 'snippet,status,contentDetails',
+            mine: 'true',
+            maxResults: '50',
+        })
+        if (pageToken) q.set('pageToken', pageToken)
+        const data = await ytFetch(`/playlists?${q.toString()}`)
+        for (const it of data.items ?? []) {
+            out.push({
+                id: it.id as string,
+                title: (it.snippet?.title as string) ?? 'Playlist',
+                privacyStatus: (it.status?.privacyStatus as 'public' | 'private') ?? 'private',
+                itemCount: (it.contentDetails?.itemCount as number) ?? 0,
+            })
+        }
+        pageToken = data.nextPageToken ?? ''
+    } while (pageToken)
+    return out
+}
+
 type PlaylistItemLite = {
     id: string
     etag: string | null
@@ -98,6 +122,12 @@ async function fetchAllPlaylistItems(playlistId: string): Promise<PlaylistItemLi
 }
 
 export const livePlaylistFacade = {
+    async listUserPlaylists(): Promise<Playlist[]> {
+        // Ensure we have permission; token acquisition handled inside ytFetch
+        await getAccessToken(['https://www.googleapis.com/auth/youtube'])
+        const lists = await listMinePlaylists()
+        return lists
+    },
     async loadPlaylist(playlistId: string): Promise<{ playlist: Playlist; items: VideoItem[] }> {
         const [meta, pItems] = await Promise.all([
             fetchPlaylistMeta(playlistId),
