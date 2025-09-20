@@ -1,4 +1,8 @@
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
+// Public OAuth Client ID for Google Identity Services used in the browser.
+// This is a public identifier (safe to expose in frontend bundles).
+const GOOGLE_OAUTH_CLIENT_ID =
+    '97231016307-dhbt66p60bd6s63loj6vsoat9pm299i6.apps.googleusercontent.com'
 
 let gisLoaded: Promise<void> | null = null
 let tokenClient: any | null = null
@@ -19,7 +23,7 @@ function loadGis(): Promise<void> {
 }
 
 export async function getAccessToken(scopes: string[]): Promise<string> {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    const clientId = GOOGLE_OAUTH_CLIENT_ID
     if (!clientId) throw new Error('permission-denied')
     await loadGis()
     const google = (window as any).google
