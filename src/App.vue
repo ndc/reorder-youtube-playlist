@@ -21,6 +21,9 @@
             <span class="mode" :title="isLive ? 'Live YouTube API' : 'Fixture data'"
                 >Mode: {{ isLive ? 'live' : 'fixture' }}</span
             >
+            <button v-if="isLive" class="ghost" @click="signOut" :disabled="signingOut">
+                {{ signingOut ? 'Signing out…' : 'Sign out' }}
+            </button>
             <button @click="load()" :disabled="loading || !selectedPlaylistId">Load</button>
             <button @click="moveUp" :disabled="!canMoveUp">Move Up</button>
             <button @click="moveDown" :disabled="!canMoveDown">Move Down</button>
@@ -129,6 +132,7 @@ import type { AppState } from './models/types'
 import MultiSortPanel from './components/MultiSortPanel.vue'
 import PositionPrompt from './components/PositionPrompt.vue'
 import type { Playlist } from './models/types'
+import { revokeAccess } from './lib/youtubeAuth'
 
 const state = ref<AppState>(initialState())
 const loading = ref(false)
@@ -140,6 +144,7 @@ const isLive = Boolean((import.meta as any).env?.VITE_YT_MODE === 'live')
 const playlists = ref<Playlist[]>([])
 const playlistsLoading = ref(false)
 const selectedPlaylistId = ref<string>('')
+const signingOut = ref(false)
 let lastAction: null | (() => Promise<void>) = null
 let lastActionKind: null | 'load' | 'apply' = null
 const retry = ref<null | (() => void)>(null)
@@ -192,8 +197,8 @@ function setItemRef(el: unknown, index: number) {
     if (el) itemRefs.value[index] = el as HTMLElement
 }
 function assignItemRef(index: number) {
-    return (el: Element | null) => {
-        if (el) setItemRef(el as unknown as HTMLElement, index)
+    return (el: any, _refs?: any) => {
+        if (el) setItemRef(el as HTMLElement, index)
     }
 }
 const activeDesc = computed(() =>
@@ -426,6 +431,28 @@ async function listPlaylists() {
         showError(humanizeError('load', e))
     } finally {
         playlistsLoading.value = false
+    }
+}
+
+async function signOut() {
+    signingOut.value = true
+    clearMessage()
+    try {
+        await revokeAccess()
+        // Reset UI selection/state for safety
+        playlists.value = []
+        selectedPlaylistId.value = ''
+        state.value = {
+            ...state.value,
+            selectedPlaylistId: null,
+            items: [],
+            selectionIndex: null,
+            dirty: false,
+        }
+    } catch {
+        showError('Sign-out failed. Please try again.')
+    } finally {
+        signingOut.value = false
     }
 }
 </script>

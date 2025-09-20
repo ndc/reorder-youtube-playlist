@@ -100,8 +100,10 @@ const fixtureFacade = {
 
 let selected: typeof fixtureFacade | undefined
 try {
-    // dynamic import only if live mode is requested
-    if ((import.meta as any).env?.VITE_YT_MODE === 'live') {
+    const env: any = (import.meta as any).env || {}
+    const isTest = Boolean(env?.TEST || env?.MODE === 'test')
+    // Only enable live mode outside tests
+    if (!isTest && env?.VITE_YT_MODE === 'live') {
         const mod = await import('./playlistFacade.live')
         selected = mod.livePlaylistFacade
     }
