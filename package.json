@@ -1,5 +1,5 @@
 {
-  "name": "reorder-youtube-playlist",
+  "name": "reorder-playlist",
   "version": "1.0.0",
   "directories": {
     "test": "tests"

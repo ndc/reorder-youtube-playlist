@@ -1,4 +1,4 @@
-# Feature Specification: Reorder YouTube Playlists
+# Feature Specification: Reorder Playlists
 
 **Feature Branch**: `001-build-a-small`  
 **Created**: 2025-09-16  
@@ -6,6 +6,7 @@
 **Input**: User description: "Build a small web app to reorder videos in YouTube public and private playlists (up to 500 videos). Provide drag-and-drop, keyboard shortcuts, and direct position entry. Support multi-sort by channel, duration, date added to playlist, date uploaded, and title."
 
 ## Execution Flow (main)
+
 ```
 1. Parse user description from Input
 	→ If empty: ERROR "No feature description provided"
@@ -28,36 +29,42 @@
 ---
 
 ## ⚡ Quick Guidelines
+
 - ✅ Focus on WHAT users need and WHY
 - ❌ Avoid HOW to implement (no tech stack, APIs, code structure)
 - 👥 Written for business stakeholders, not developers
 
 ### Section Requirements
+
 - **Mandatory sections**: Must be completed for every feature
 - **Optional sections**: Include only when relevant to the feature
 - When a section doesn't apply, remove it entirely (don't leave as "N/A")
 
 ### For AI Generation
+
 When creating this spec from a user prompt:
+
 1. **Mark all ambiguities**: Use [NEEDS CLARIFICATION: specific question] for any assumption you'd need to make
 2. **Don't guess**: If the prompt doesn't specify something (e.g., "login system" without auth method), mark it
 3. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
 4. **Common underspecified areas**:
-	- User types and permissions
-	- Data retention/deletion policies  
-	- Performance targets and scale
-	- Error handling behaviors
-	- Integration requirements
-	- Security/compliance needs
+    - User types and permissions
+    - Data retention/deletion policies
+    - Performance targets and scale
+    - Error handling behaviors
+    - Integration requirements
+    - Security/compliance needs
 
 ---
 
 ## User Scenarios & Testing (mandatory)
 
 ### Primary User Story
+
 As a playlist owner, I want to quickly reorder videos in my public and private YouTube playlists (up to 500 items) using drag-and-drop, keyboard shortcuts, or direct position input, so that I can arrange content the way I prefer without cumbersome manual steps.
 
 ### Acceptance Scenarios
+
 1. Given a playlist with 200 videos, When the user opens it, Then the system displays all items with essential metadata (title, channel, duration, date added to playlist, date uploaded) and enables reordering controls.
 2. Given a playlist with 50 videos, When the user drags one video above another, Then the preview order updates immediately without committing changes until the user confirms Apply/Save.
 3. Given a playlist with 300 videos, When the user uses keyboard shortcuts to move the selected video up/down and jump to a specific position they enter, Then the preview order updates accordingly and remains fully keyboard-operable.
@@ -66,6 +73,7 @@ As a playlist owner, I want to quickly reorder videos in my public and private Y
 6. Given a user with access to a private playlist they own, When they open it, Then they can reorder it with the same capabilities as a public playlist they own.
 
 ### Edge Cases
+
 - Playlist has 0 or 1 item (no-op reordering).
 - Exactly 500 items (upper limit): still fully supported.
 - Items with missing or unknown metadata (e.g., unknown duration) must be handled consistently in sorting.
@@ -77,6 +85,7 @@ As a playlist owner, I want to quickly reorder videos in my public and private Y
 ## Requirements (mandatory)
 
 ### Functional Requirements
+
 - **FR-001**: The system MUST allow the user to select one of their playlists to reorder.
 - **FR-002**: The system MUST support reordering for playlists the user owns that are public or private.
 - **FR-003**: The system MUST display up to 500 items from the selected playlist including: title, channel, duration, date added to playlist, and date uploaded (when available).
@@ -97,6 +106,7 @@ As a playlist owner, I want to quickly reorder videos in my public and private Y
 - **FR-020**: The system MUST allow the user to choose ascending/descending per sort field and define the precedence of multiple fields.
 
 ### Key Entities (data involved)
+
 - **User**: The playlist owner interacting with the system; has permission to view and reorder their playlists.
 - **Playlist**: A named collection of up to 500 items the user owns; attributes include name, privacy status, item count.
 - **Playlist Item (Video)**: An item with attributes needed for sorting and display: title, channel, duration, date added to playlist, date uploaded, and an identifier to reference its position in the playlist.
@@ -107,17 +117,20 @@ As a playlist owner, I want to quickly reorder videos in my public and private Y
 ---
 
 ## Review & Acceptance Checklist
-*GATE: Automated checks run during main() execution*
+
+_GATE: Automated checks run during main() execution_
 
 ### Content Quality
+
 - [ ] No implementation details (languages, frameworks, APIs)
 - [ ] Focused on user value and business needs
 - [ ] Written for non-technical stakeholders
 - [ ] All mandatory sections completed
 
 ### Requirement Completeness
+
 - [ ] No [NEEDS CLARIFICATION] markers remain
-- [ ] Requirements are testable and unambiguous  
+- [ ] Requirements are testable and unambiguous
 - [ ] Success criteria are measurable
 - [ ] Scope is clearly bounded
 - [ ] Dependencies and assumptions identified
@@ -125,7 +138,8 @@ As a playlist owner, I want to quickly reorder videos in my public and private Y
 ---
 
 ## Execution Status
-*Updated by main() during processing*
+
+_Updated by main() during processing_
 
 - [ ] User description parsed
 - [ ] Key concepts extracted

@@ -1,4 +1,4 @@
-# Reorder YouTube Playlist
+# Reorder Playlist
 
 A small Vue 3 + TypeScript app to preview and apply reordering of YouTube playlists.
 

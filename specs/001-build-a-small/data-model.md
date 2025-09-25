@@ -1,14 +1,16 @@
-# Data Model: Reorder YouTube Playlists
+# Data Model: Reorder Playlists
 
 ## Entities
 
 ### Playlist
+
 - id: string
 - title: string
 - privacyStatus: enum [public, private]
 - itemCount: number (<= 500)
 
 ### VideoItem
+
 - id: string
 - title: string
 - channel: string
@@ -18,16 +20,19 @@
 - originalIndex: number (0-based)
 
 ### SortRule
+
 - field: enum [channel, duration, dateAdded, dateUploaded, title]
 - direction: enum [asc, desc]
 - precedence: number (1 = primary)
 
 ### ReorderPlan
+
 - previewOrder: array<VideoItem.id>
 - operations: array<{ id: string, from: number, to: number }>
 - canUndo: boolean
 
 ### AppState
+
 - selectedPlaylistId: string | null
 - items: array<VideoItem>
 - selectionIndex: number | null
@@ -36,6 +41,7 @@
 - lastAppliedAt: ISO 8601 datetime | null
 
 ## Validation & Rules
+
 - Playlists over 500 items are out of scope.
 - Sorting unknown values: unknowns order after known values; stable sort; tie-break on originalIndex.
 - Keyboard reordering must maintain a single focused selection.

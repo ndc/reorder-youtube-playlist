@@ -1,6 +1,6 @@
 <template>
     <main>
-        <h1>Reorder YouTube Playlist</h1>
+        <h1>Reorder Playlist</h1>
         <section class="controls">
             <div class="inline">
                 <label>

@@ -1,9 +1,10 @@
-# Implementation Plan: Reorder YouTube Playlists
+# Implementation Plan: Reorder Playlists
 
 **Branch**: `001-build-a-small` | **Date**: 2025-09-17 | **Spec**: C:\Spikes\SpecKit\reorder-youtube-playlist\specs\001-build-a-small\spec.md
 **Input**: Feature specification from `/specs/001-build-a-small/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    → Loaded successfully
@@ -25,9 +26,11 @@
 ```
 
 ## Summary
+
 Enable playlist owners to reorder up to 500 videos using drag-and-drop, keyboard controls, direct position entry, and multi-field sorting (channel, duration, date added, date uploaded, title). Deliver as a small, client-only web app to streamline playlist organization while remaining accessible and keyboard-friendly.
 
 ## Technical Context
+
 **Language/Version**: TypeScript (ES2022 targets)  
 **Primary Dependencies**: Vue 3 (Composition API)  
 **Storage**: N/A (no backend; in-memory state)  
@@ -36,12 +39,13 @@ Enable playlist owners to reorder up to 500 videos using drag-and-drop, keyboard
 **Project Type**: single/web (frontend-only SPA; no backend server)  
 **Performance Goals**: Load and render 500 items with responsive UI (<200ms per sort, initial usable <2s on typical broadband)  
 **Constraints**: Keyboard operable; WCAG 2.1 AA basics; respect external API quotas; no secrets persisted  
-**Scale/Scope**: Single-user tool; playlists up to 500 items; limited concurrency awareness  
+**Scale/Scope**: Single-user tool; playlists up to 500 items; limited concurrency awareness
 
 Technical Context inputs from user: build with Vue 3 in Composition API as a SPA without backend; use TypeScript.
 
 ## Constitution Check
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 - Functional Style: Service functions will be pure where practical; plan isolates mutations to state management and DOM interactions.
 - Simplicity First: Single SPA, minimal deps; no backend introduced.
@@ -55,6 +59,7 @@ Conclusion: PASS with a limited exception to “actual APIs” in CI due to thir
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/001-build-a-small/
 ├── plan.md              # This file (/plan output)
@@ -66,6 +71,7 @@ specs/001-build-a-small/
 ```
 
 ### Source Code (repository root)
+
 ```
 # Option 1: Single project (DEFAULT)
 src/
@@ -83,7 +89,9 @@ tests/
 **Structure Decision**: Option 1. SPA only; no backend project created.
 
 ## Phase 0: Outline & Research
+
 See `research.md` for resolved unknowns and decisions:
+
 - Ownership scope: only playlists owned by the authenticated user.
 - Keyboard shortcuts: Up/Down to navigate selection; Ctrl+Up/Down to move item; Enter opens “Move to position”; Home/End jump to start/end; PageUp/Down scroll page; `?` opens help.
 - Unknown metadata in sort: treat as greater than known values (i.e., appear last) with stable original order; ties break by original index.
@@ -93,7 +101,9 @@ See `research.md` for resolved unknowns and decisions:
 - Undo: single-level undo before Apply (optional; aim to include).
 
 ## Phase 1: Design & Contracts
+
 Artifacts generated:
+
 - `data-model.md`: Entities (Playlist, VideoItem, SortRule, ReorderPlan, AppState) and validation rules.
 - `contracts/ui-contracts.md`: UI interaction contracts (drag, keyboard, direct position entry) and observable behaviors.
 - `contracts/service-contracts.md`: Facade contracts for playlist load and apply operations.
@@ -101,7 +111,9 @@ Artifacts generated:
 - Agent context updated via `.specify/scripts/powershell/update-agent-context.ps1 -AgentType copilot`.
 
 ## Phase 2: Task Planning Approach
+
 The /tasks command will:
+
 - Generate tasks from data-model and contracts.
 - Create contract test tasks (UI/service contracts) [P].
 - Create model/service implementation tasks [P].
@@ -109,12 +121,15 @@ The /tasks command will:
 - Order by TDD: tests then implementation; models → services → UI.
 
 ## Complexity Tracking
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|---------------------------------------|
+
+| Violation                                  | Why Needed                 | Simpler Alternative Rejected Because                |
+| ------------------------------------------ | -------------------------- | --------------------------------------------------- |
 | CI uses recorded fixtures for external API | Third-party quotas/consent | Live API in CI is flaky and requires secrets/quotas |
 
 ## Progress Tracking
+
 **Phase Status**:
+
 - [x] Phase 0: Research complete (/plan command)
 - [x] Phase 1: Design complete (/plan command)
 - [ ] Phase 2: Task planning complete (/plan command - describe approach only)
@@ -123,10 +138,12 @@ The /tasks command will:
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
+
 - [x] Initial Constitution Check: PASS
 - [x] Post-Design Constitution Check: PASS
 - [x] All NEEDS CLARIFICATION resolved
 - [x] Complexity deviations documented
 
 ---
-*Based on Constitution v1.0.0 - See `/.specify/memory/constitution.md`*
+
+_Based on Constitution v1.0.0 - See `/.specify/memory/constitution.md`_
