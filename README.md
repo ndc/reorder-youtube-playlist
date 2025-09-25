@@ -2,8 +2,8 @@
 
 A small Vue 3 + TypeScript app to preview and apply reordering of YouTube playlists.
 
-- Fixture mode (default): uses local data so you can try the UI with no API access.
-- Live mode: authenticates with your Google account and works on your real playlists.
+- Live mode (default): authenticates with your Google account and works on your real playlists.
+- Dev/Fixture mode: uses local data so you can try the UI with no API access. Enable with `VITE_YT_MODE=dev`.
 
 ## Prerequisites
 
@@ -18,38 +18,38 @@ npm ci
 
 ## Running the app
 
-### Fixture mode (default)
+### Dev/Fixture mode
 
-No environment variables needed.
+Set `VITE_YT_MODE=dev` to use the local facade (no Google sign-in required).
 
 ```powershell
 npm run dev
 ```
 
-Open the URL shown by Vite (usually http://localhost:5173/). The dropdown will show the fixture playlist; click `Load` to bring items in.
+Open the URL shown by Vite (usually http://localhost:5173/). In dev mode the dropdown will show the fixture playlist; click `Load` to bring items in.
 
-### Live mode
+### Live mode (default)
 
 This uses Google Identity Services (OAuth 2.0) in the browser. The OAuth Client ID is embedded in the app and safe to ship (it’s a public identifier). If you need to use your own client, see the note below.
 
-Turn on live mode via `VITE_YT_MODE=live`.
+Live mode is on by default. No environment variable is needed. To switch back to the dev facade, set `VITE_YT_MODE=dev`.
 
 - PowerShell (recommended on Windows):
 
 ```powershell
-$env:VITE_YT_MODE = 'live'; npm run dev
+$env:VITE_YT_MODE = 'dev'; npm run dev
 ```
 
 - Command Prompt (cmd.exe):
 
 ```bat
-set VITE_YT_MODE=live && npm run dev
+set VITE_YT_MODE=dev && npm run dev
 ```
 
 - Bash (macOS/Linux/Git Bash):
 
 ```bash
-VITE_YT_MODE=live npm run dev
+VITE_YT_MODE=dev npm run dev
 ```
 
 Alternatively, create an environment file so you don’t have to remember shell syntax:
@@ -57,7 +57,7 @@ Alternatively, create an environment file so you don’t have to remember shell 
 - Create a file named `.env.local` in the repo root with:
 
 ```
-VITE_YT_MODE=live
+VITE_YT_MODE=dev
 ```
 
 Then just run:
@@ -88,7 +88,7 @@ npm run preview
 
 ## Configuration notes
 
-- Live/Fixture toggle: controlled by `VITE_YT_MODE` (empty or missing = fixture; `live` = real API).
+- Live/Dev toggle: controlled by `VITE_YT_MODE` (`dev` = local fixture facade; anything else or missing = live API).
 - Google OAuth Client ID: currently hardcoded in `src/lib/youtubeAuth.ts` as a public identifier for browser OAuth. If you need to change it, edit that file and replace the constant with your own client ID.
 - Scopes: the app requests `https://www.googleapis.com/auth/youtube` to list playlists and apply reorder operations.
 - OAuth safety: never put client secrets or unrestricted API keys in frontend code. The OAuth Client ID is public by design; restrict OAuth app origins and scopes in Google Cloud Console.

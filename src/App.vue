@@ -162,7 +162,8 @@ const message = ref('')
 const messageType = ref<'ok' | 'err' | ''>('')
 const helpOpen = ref(false)
 const FIRST_VISIT_KEY = 'ryp:firstVisitShown'
-const isLive = Boolean((import.meta as any).env?.VITE_YT_MODE === 'live')
+// Default to live; set VITE_YT_MODE="dev" to use the local facade
+const isLive = (import.meta as any).env?.VITE_YT_MODE !== 'dev'
 const playlists = ref<Playlist[]>([])
 const playlistsLoading = ref(false)
 const selectedPlaylistId = ref<string>('')

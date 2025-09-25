@@ -102,8 +102,8 @@ let selected: typeof fixtureFacade | undefined
 try {
     const env: any = (import.meta as any).env || {}
     const isTest = Boolean(env?.TEST || env?.MODE === 'test')
-    // Only enable live mode outside tests
-    if (!isTest && env?.VITE_YT_MODE === 'live') {
+    // Default to live unless explicitly in dev (fixture) or running tests
+    if (!isTest && env?.VITE_YT_MODE !== 'dev') {
         const mod = await import('./playlistFacade.live')
         selected = mod.livePlaylistFacade
     }
