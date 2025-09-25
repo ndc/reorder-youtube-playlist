@@ -33,7 +33,7 @@
             </button>
             <button @click="toggleSortPanel">Multi-Sort</button>
             <button @click="undo" :disabled="!canUndo">Undo</button>
-            <button @click="openHelp" aria-haspopup="dialog">Help</button>
+            <button @click="() => openHelp()" aria-haspopup="dialog">Help</button>
             <button class="primary" @click="apply" :disabled="!dirty || applying">
                 Apply Changes
             </button>
@@ -58,19 +58,40 @@
             @close="showSort = false"
         />
 
-        <div v-if="helpOpen" class="overlay" @click.self="helpOpen = false">
+        <div v-if="helpOpen" class="overlay" @click.self="closeHelp()">
             <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kbd-title">
                 <header>
-                    <h3 id="kbd-title">Keyboard Shortcuts</h3>
-                    <button class="ghost" @click="helpOpen = false">Close</button>
+                    <h3 id="kbd-title">Help & Shortcuts</h3>
+                    <button class="ghost" @click="closeHelp()">Close</button>
                 </header>
+                <p class="help-intro">
+                    Load a YouTube playlist, reorder items with keyboard (or the buttons),
+                    optionally apply multi-column sorting, or jump an item directly to a target
+                    position. Press “Apply Changes” to push the new order to YouTube. Undo reverts
+                    only the most recent move/sort.
+                </p>
+                <h4>Keyboard</h4>
                 <ul>
-                    <li>Up/Down: Move selected item by 1</li>
-                    <li>Ctrl+Up/Down: Move selected item by 5</li>
-                    <li>Home/End: Move to first/last position</li>
-                    <li>Enter: Move to specific position</li>
-                    <li>?: Toggle this help</li>
+                    <li><strong>Up / Down</strong>: Move selected item by 1</li>
+                    <li><strong>Ctrl+Up / Ctrl+Down</strong>: Move selected item by 5</li>
+                    <li><strong>Home / End</strong>: Move to first / last position</li>
+                    <li><strong>Enter</strong>: Prompt for specific position</li>
+                    <li><strong>?</strong>: Toggle this help</li>
                 </ul>
+                <h4>Other Tips</h4>
+                <ul>
+                    <li>
+                        Use Multi-Sort to sort by multiple fields, then fine-tune individual items.
+                    </li>
+                    <li>Changes are not saved until you click Apply Changes.</li>
+                    <li>
+                        If the playlist changed elsewhere, you'll see a precondition message—reload
+                        and re-apply.
+                    </li>
+                </ul>
+                <a href="./privacypolicy.html" target="_blank" rel="noopener noreferrer"
+                    >Privacy Policy</a
+                >
             </div>
         </div>
 
@@ -140,6 +161,7 @@ const applying = ref(false)
 const message = ref('')
 const messageType = ref<'ok' | 'err' | ''>('')
 const helpOpen = ref(false)
+const FIRST_VISIT_KEY = 'ryp:firstVisitShown'
 const isLive = Boolean((import.meta as any).env?.VITE_YT_MODE === 'live')
 const playlists = ref<Playlist[]>([])
 const playlistsLoading = ref(false)
@@ -210,8 +232,15 @@ watch(selectionIndex, async (i: number | null) => {
     itemRefs.value[i]?.focus()
 })
 
-function openHelp() {
+function openHelp(force = false) {
     helpOpen.value = true
+    if (force) return
+    try {
+        localStorage.setItem(FIRST_VISIT_KEY, '1')
+    } catch {}
+}
+function closeHelp() {
+    helpOpen.value = false
 }
 function captureSnapshot() {
     prevSnapshot.value = {
@@ -366,6 +395,14 @@ onMounted(async () => {
             await load()
         }
     }
+    // Auto open help first visit
+    try {
+        if (!localStorage.getItem(FIRST_VISIT_KEY)) {
+            setTimeout(() => openHelp(true), 100)
+            localStorage.setItem(FIRST_VISIT_KEY, '1')
+        }
+    } catch {}
+
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
         if (state.value.dirty) {
             event.preventDefault()
@@ -544,5 +581,29 @@ p.err {
     border: 1px solid #e5e7eb;
     padding: 0.3rem 0.6rem;
     border-radius: 4px;
+}
+.app-desc {
+    max-width: 65ch;
+    line-height: 1.4;
+    color: #374151;
+    font-size: 0.95rem;
+    margin: 0.35rem 0 0.9rem;
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+.help-intro {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #374151;
+    margin: 0 0 0.75rem;
 }
 </style>
