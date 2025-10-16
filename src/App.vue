@@ -92,6 +92,9 @@
                 <a href="./privacypolicy.html" target="_blank" rel="noopener noreferrer"
                     >Privacy Policy</a
                 >
+                <a href="./termsofservice.html" target="_blank" rel="noopener noreferrer"
+                    >Terms of Service</a
+                >
             </div>
         </div>
 
